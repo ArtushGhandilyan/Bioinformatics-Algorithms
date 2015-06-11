@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Created by Artush on 4/9/2015.
+ * Created by Artush on 5/30/2015.
  */
-public class RandomizedMotifSearch {
+public class GibbsSampler {
     public static final String LETTERS = "ACGT";
 
     public static Random random = new Random();
@@ -16,16 +16,17 @@ public class RandomizedMotifSearch {
     public static void main(String[] args) throws IOException {
         Integer k = 15;
         Integer t = 20;
-        List<String> patterns = readAllLines("rosalind_3f.txt");
+        Integer N = 2000;
+        List<String> patterns = readAllLines("rosalind_3g.txt");
 
 
-        List<String> bestMotifs = randomizedMotifSearch(patterns, k, t);
+        List<String> bestMotifs = randomizedMotifSearch(patterns, k, t, N);
         for (String bestMotif : bestMotifs) {
             System.out.println(bestMotif);
         }
     }
 
-    private static List<String> randomizedMotifSearch(List<String> patterns, Integer length, Integer t) {
+    private static List<String> randomizedMotifSearch(List<String> patterns, Integer length, Integer t, Integer N) {
         float minScore = Float.MAX_VALUE;
         List<String> bestMotifs = new ArrayList<>();
 
@@ -33,13 +34,15 @@ public class RandomizedMotifSearch {
             List<String> currentBestMotifs = generateRandomMotifs(patterns, length);
             float currentBestScore = getScore(currentBestMotifs);
 
-            while (true) {
-                Map<String, List<Float>> profile = profile(currentBestMotifs);
+            for(int j = 0; j < N; j++) {
+                int index = random.nextInt(patterns.size() - 1);
+                Map<String, List<Float>> profile = profile(currentBestMotifs, index);
 
                 List<String> currentMotifs = new ArrayList<>();
-                for (String pattern : patterns) {
-                    currentMotifs.add(findMostProbableKMer(pattern, length, profile));
-                }
+                currentMotifs.addAll(currentBestMotifs);
+
+                String mostProbableKMer = findMostProbableKMer(patterns.get(index), length, profile);
+                currentMotifs.add(index, mostProbableKMer);
 
                 float score = getScore(currentMotifs);
 
@@ -83,20 +86,23 @@ public class RandomizedMotifSearch {
         return pr;
     }
 
-    private static Map<String, List<Float>> profile(List<String> motifs) {
+    private static Map<String, List<Float>> profile(List<String> motifs, int index) {
         int length = motifs.get(0).length();
         int count = motifs.size();
 
         Map<String, List<Float>> matrix = new HashMap<>();
         for (int i = 0; i < LETTERS.length(); i++) {
             String letter = LETTERS.substring(i, i + 1);
-            matrix.put(letter, new ArrayList<Float>(Collections.<Float>nCopies(length, 0f)));
+            matrix.put(letter, new ArrayList<Float>(Collections.<Float>nCopies(length, 0.25f)));
         }
 
         for (int i = 0; i < length; i++) {
-            for (String motif : motifs) {
-                List<Float> row = matrix.get(motif.substring(i, i + 1));
-                row.set(i, row.get(i) + 1);
+            for (int i1 = 0; i1 < motifs.size(); i1++) {
+                if(i1 != index) {
+                    String motif = motifs.get(i1);
+                    List<Float> row = matrix.get(motif.substring(i, i + 1));
+                    row.set(i, row.get(i) + 1);
+                }
             }
 
             for (int j = 0; j < LETTERS.length(); j++) {
@@ -158,4 +164,5 @@ public class RandomizedMotifSearch {
             return result;
         }
     }
+
 }
